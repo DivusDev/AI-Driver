@@ -1,0 +1,13 @@
+{
+  "name": "p5js-starter",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "node ./node_modules/gulp/bin/gulp.js"
+  },
+  "dependencies": {
+    "browser-sync": "^2.26.3",
+    "gulp": "^4.0.0"
+  }
+}
