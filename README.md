@@ -10,4 +10,4 @@ npm start
 ```
 
 to start the development server. Put all of your p5.js related code (i.e. your sketch) in `sketch.js`. Happy sketching! ⚡️
-w
+
