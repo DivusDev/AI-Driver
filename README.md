@@ -10,4 +10,17 @@ npm start
 ```
 
 to start the development server. Put all of your p5.js related code (i.e. your sketch) in `sketch.js`. Happy sketching! ⚡️
-w
+
+
+Improvements:
+Performance improvements:
+- Floor function for scoring
+- Crash when at score floor
+- Only draw top 3 for every iteration
+
+Features:
+- Save AI and load AI
+- AI Race mode
+- AI Training mode
+- Track builder mode
+- Multi track select
