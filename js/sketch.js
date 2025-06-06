@@ -115,7 +115,12 @@ function drawGeneration() {
   rect(SIZE_X / 2 - 150, SIZE_Y / 2 - 40, 300, 80);
   textSize(24);
   fill("black");
-  text(`Generation: ${generationCounter}`, SIZE_X / 2 - 125, SIZE_Y / 2 + 10);
+  text(`Generation: ${generationCounter}`, SIZE_X / 2 - 125, SIZE_Y / 2);
+  text(
+    `Alive drivers: ${currentCars.filter((c) => !c.crashed).length}`,
+    SIZE_X / 2 - 125,
+    SIZE_Y / 2 + 25
+  );
 }
 
 function newCarEvolution() {

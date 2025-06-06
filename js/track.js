@@ -76,7 +76,7 @@ class TrackPiece {
     if (this.goal != null) {
       strokeWeight(4);
       stroke("green");
-      line(this.goal.x1, this.goal.y1, this.goal.x2, this.goal.y2);
+      // line(this.goal.x1, this.goal.y1, this.goal.x2, this.goal.y2);
     }
     for (let wall of this.walls) {
       stroke(1);
@@ -96,6 +96,17 @@ class Track {
     for (let trackPiece of this.trackValues) {
       trackPiece.draw();
     }
+    let finishLine = this.trackValues[0].empty[0];
+    strokeWeight(5);
+    drawingContext.setLineDash([10, 10]);
+    line(
+      finishLine.x1 + 5,
+      finishLine.y1 + 5,
+      finishLine.x2 + 5,
+      finishLine.y2
+    );
+    strokeWeight(1);
+    drawingContext.setLineDash([1]);
   }
 
   /**
