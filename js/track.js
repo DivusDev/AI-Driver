@@ -5,7 +5,7 @@ class TrackPiece {
   //     │                    │
   //  (x1, y2)────────────(x2, y2)
 
-  constructor(x1, y1, x2, y2, sideTypes) {
+  constructor(x1, y1, x2, y2, sideTypes, type) {
     this.x1 = x1;
     this.x2 = x2;
     this.y1 = y1;
@@ -14,6 +14,7 @@ class TrackPiece {
     this.walls = [];
     this.goal = null;
     this.empty = [];
+    this.type = type;
     for (let sideIndex in this.sideTypes) {
       var x1S, y1S, x2S, y2S;
       switch (sideIndex) {
@@ -89,7 +90,6 @@ class Track {
   constructor(trackValues) {
     this.trackValues = trackValues;
     this.lastTrackIndex = null;
-    this.score = 0;
   }
 
   draw() {
@@ -113,7 +113,14 @@ class Track {
     let directionValue = Track.getDirectionValue(direction);
     let sideValues = ["wall", "goal", "wall", "empty"];
     sideValues.rotateRight(directionValue);
-    return new TrackPiece(x1, y1, x1 + length, y1 + width, sideValues);
+    return new TrackPiece(
+      x1,
+      y1,
+      x1 + length,
+      y1 + width,
+      sideValues,
+      "straight"
+    );
   }
 
   /**
@@ -131,7 +138,14 @@ class Track {
     let directionValue = Track.getDirectionValue(direction);
     let sideValues = ["wall", "wall", "goal", "empty"];
     sideValues.rotateRight(directionValue);
-    return new TrackPiece(x1, y1, x1 + length, y1 + width, sideValues);
+    return new TrackPiece(
+      x1,
+      y1,
+      x1 + length,
+      y1 + width,
+      sideValues,
+      "corner"
+    );
   }
 
   static getDirectionValue(direction) {
@@ -173,23 +187,26 @@ class Track {
    *
    * @param {Number} nextTrackIndex
    */
-  addScore(nextTrackIndex) {
+  calculateScore(car, nextTrackIndex) {
     if (nextTrackIndex == null) {
-      this.score = -1000000000;
       return;
     }
+    if (car.speed < 0.2) {
+      car.score -= 100;
+    }
     if (
+      this.trackValues[car.lastTrackIndex]?.type === "corner" &&
       nextTrackIndex === 0 &&
-      this.lastTrackIndex === this.trackValues.length - 1 &&
-      this.score > 5000
+      car.lastTrackIndex === this.trackValues.length - 1 &&
+      car.score > 5000
     ) {
-      this.score = this.score * 100;
-    } else if (nextTrackIndex > this.lastTrackIndex) {
-      this.score += 1000;
-    } else if (nextTrackIndex < this.lastTrackIndex) {
-      this.score -= 2000;
-    } else if (this.score % 1000 < 500) {
-      this.score += 0.1;
+      car.score = car.score * 100;
+    } else if (nextTrackIndex > car.lastTrackIndex) {
+      car.score += 3000;
+    } else if (nextTrackIndex < car.lastTrackIndex) {
+      car.score -= 6000;
+    } else {
+      car.score -= 100;
     }
   }
 }

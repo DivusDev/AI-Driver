@@ -1,7 +1,7 @@
 const maxVisionDistance = 150;
 
 class Car {
-  constructor(x, y, showVisionLines) {
+  constructor(x, y, showVisionLines, driver) {
     this.x = x;
     this.y = y;
     this.velx = 0;
@@ -12,8 +12,12 @@ class Car {
     this.height = 20;
     this.VMax = 5;
     this.showVisionLines = showVisionLines;
+    this.lastTrackIndex = null;
 
-    this.collisionDistances = [];
+    this.score = 0;
+
+    this.crashed = false;
+
     this.collisionRays = [
       { rotation: -QUARTER_PI - HALF_PI, maxVisionDistance },
       { rotation: -QUARTER_PI, maxVisionDistance },
@@ -24,9 +28,21 @@ class Car {
       { rotation: QUARTER_PI + HALF_PI, maxVisionDistance },
       { rotation: PI, maxVisionDistance },
     ];
+    this.collisionDistances = this.collisionRays.map(
+      (r) => r.maxVisionDistance
+    );
+    if (driver == null) {
+      this.driver = new NeuralNet(this.collisionDistances.length, 16, 4);
+    } else {
+      this.driver = driver;
+    }
   }
 
-  showV2() {
+  static createCar(driver, showLines = false) {
+    return new Car(250, 150, showLines, driver);
+  }
+
+  draw() {
     stroke(0);
     push();
     // move canvas to car position
@@ -36,6 +52,7 @@ class Car {
     rect(this.width / -2, this.height / -2, this.width, this.height);
 
     // draw vision
+
     if (this.showVisionLines) {
       fill("black");
       for (let index in this.collisionRays) {
@@ -61,12 +78,32 @@ class Car {
     pop();
   }
 
-  driveV2() {
+  move() {
     this.x += this.speed * cos(this.rotate);
     this.y += this.speed * sin(this.rotate);
   }
 
-  accelerateV2(acceleration, rotation) {
+  drive(forward, backward, left, right) {
+    if (forward || backward || left || right) {
+      if (left || right) {
+        this.score += 100;
+      }
+      this.accelerate(
+        ((forward ? 1 : 0) - (backward ? 1 : 0)) * 0.2,
+        ((left ? 1 : 0) - (right ? 1 : 0)) * 0.8
+      );
+    } else {
+      this.accelerate(-0.1 * this.speed, 0);
+    }
+  }
+
+  crash() {
+    this.speed = 0;
+    this.lastTrackIndex = null;
+    this.crashed = true;
+  }
+
+  accelerate(acceleration, rotation) {
     if (acceleration > 0) {
       const accelFactor = this.logisticResponse(acceleration);
       const accel = acceleration * accelFactor;
@@ -160,5 +197,31 @@ class Car {
     const ix = ax1 + s * dx1;
     const iy = ay1 + s * dy1;
     return Math.hypot(ix - ax1, iy - ay1);
+  }
+
+  // ************************************************
+  //                   Neural code
+  // ************************************************
+
+  thinkAndDrive() {
+    const output = this.driver.predict(this.collisionDistances);
+    const rate = 0.5;
+    this.drive(
+      output[0] > rate,
+      output[1] > rate,
+      output[2] > rate,
+      output[3] > rate
+    );
+  }
+
+  copyDriver() {
+    const newDriver = this.driver.copy();
+    newDriver.mutate(0.3);
+    const newCar = Car.createCar(newDriver);
+    return newCar;
+  }
+
+  dispose() {
+    this.driver.dispose();
   }
 }

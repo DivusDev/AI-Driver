@@ -1,18 +1,20 @@
 const SIZE_X = 800;
 const SIZE_Y = 1000;
 
-const train_xs = tf.tensor2d([
-  [0, 0],
-  [1, 0],
-  [0, 1],
-  [1, 1],
-]);
-const train_ys = tf.tensor2d([[0], [1], [1], [0]]);
+numCars = 100;
+currentCars = [];
+savedCars = [];
+
+generationCounter = 0;
 
 function setup() {
   createCanvas(SIZE_X, SIZE_Y);
 
-  car = new Car(250, 150, true);
+  for (let i = 0; i < numCars; i++) {
+    currentCars.push(Car.createCar());
+  }
+  playerCar = Car.createCar(true, true);
+
   track = new Track([
     Track.buildStraight("right", 200, 100),
     Track.buildStraight("right", 300, 100),
@@ -39,91 +41,101 @@ function setup() {
     Track.buildStraight("up", 100, 200),
     Track.buildCorner("up", 100, 100),
   ]);
-
-  // xs = tf.tensor2d(inputs);
-
-  model = tf.sequential();
-  let hidden1 = tf.layers.dense({
-    inputShape: [8],
-    units: 16,
-    activation: "sigmoid",
-  });
-  let output = tf.layers.dense({
-    units: 4,
-    activation: "sigmoid",
-  });
-  model.add(hidden1);
-  model.add(output);
-
-  const optimizer = tf.train.adam(0.2);
-  model.compile({
-    optimizer: optimizer,
-    loss: "meanSquaredError",
-  });
 }
-
-function train() {
-  trainModel().then((result) => {
-    ///console.log(result.history.loss[0]);
-    setTimeout(train, 10);
-  });
-}
-
-function trainModel() {
-  return model.fit(train_xs, train_ys, {
-    shuffle: true,
-    epochs: 1,
-  });
-}
+framecount = 0;
 
 function draw() {
-  background(220);
-  track.draw();
-  car.driveV2();
-  if (
-    keyIsDown(UP_ARROW) ||
-    keyIsDown(DOWN_ARROW) ||
-    keyIsDown(LEFT_ARROW) ||
-    keyIsDown(RIGHT_ARROW)
-  ) {
-    car.accelerateV2(
-      ((keyIsDown(UP_ARROW) ?? false) - (keyIsDown(DOWN_ARROW) ?? false)) * 0.2,
-      ((keyIsDown(RIGHT_ARROW) ?? false) - (keyIsDown(LEFT_ARROW) ?? false)) *
-        0.8
-    );
-  } else {
-    car.accelerateV2(-0.1 * car.speed, 0);
-  }
-  let foundTrackIndex = track.inTrack(
-    car.x + car.width / 2,
-    car.y + car.height / 2
-  );
-  if (foundTrackIndex != null) {
-    fill("green");
-  } else if (foundTrackIndex == null) {
-    fill("red");
-  }
-  track.addScore(foundTrackIndex);
-  track.lastTrackIndex = foundTrackIndex;
-  car.see(track, foundTrackIndex);
-  car.showV2();
+  // drawPlayer();
+  drawAI();
+}
 
+function drawPlayer() {
+  background(220);
+
+  track.draw();
+  playerCar.drive(
+    keyIsDown(UP_ARROW),
+    keyIsDown(DOWN_ARROW),
+    keyIsDown(RIGHT_ARROW),
+    keyIsDown(LEFT_ARROW)
+  );
+  let foundTrackIndex = track.inTrack(
+    playerCar.x + playerCar.width / 2,
+    playerCar.y + playerCar.height / 2
+  );
+  playerCar.lastTrackIndex = foundTrackIndex;
+  playerCar.move();
+  playerCar.see(track, foundTrackIndex);
+  if (playerCar.lastTrackIndex != null && playerCar.score > -2000) {
+    fill("rgba(0, 122, 0, 0.2)");
+  } else {
+    fill("red");
+    playerCar.crash();
+  }
+  playerCar.draw();
+}
+
+function drawAI() {
+  background(220);
+
+  track.draw();
+
+  for (let i = 0; i < currentCars.length; i++) {
+    let currCar = currentCars[i];
+    if (!currCar.crashed) {
+      currCar.thinkAndDrive();
+      currCar.move();
+
+      let foundTrackIndex = track.inTrack(
+        currCar.x + currCar.width / 2,
+        currCar.y + currCar.height / 2
+      );
+      track.calculateScore(currCar, foundTrackIndex);
+      currCar.lastTrackIndex = foundTrackIndex;
+      currCar.see(track, foundTrackIndex);
+      if (currCar.lastTrackIndex != null && currCar.score > -2000) {
+        fill("rgba(0, 122, 0, 0.2)");
+      } else {
+        fill("red");
+        currCar.crash();
+      }
+      currCar.draw();
+    }
+  }
+  if (currentCars.filter((c) => !c.crashed).length < 1) {
+    newCarEvolution();
+    generationCounter++;
+  }
+  drawGeneration();
+}
+
+function drawGeneration() {
   // Draw score
   fill("white");
   rect(SIZE_X / 2 - 150, SIZE_Y / 2 - 40, 300, 80);
   textSize(24);
   fill("black");
-  text(
-    `Score: ${Math.floor(track.score * 100) / 100}`,
-    SIZE_X / 2 - 125,
-    SIZE_Y / 2 + 10
-  );
+  text(`Generation: ${generationCounter}`, SIZE_X / 2 - 125, SIZE_Y / 2 + 10);
 }
 
-/**
- * This function is called when the mouse is clicked.
- * @param {MouseEvent} event - The `MouseEvent` that is passed as an argument.
- */
-function mouseClicked(event) {
-  console.log(mouseX, mouseY);
+function newCarEvolution() {
+  const bestCarCount = 1;
+  bestCars = currentCars
+    .sort((a, b) => b.score - a.score)
+    .slice(0, bestCarCount);
+  for (let i = 0; i < bestCarCount; i++) {
+    currentCars.shift();
+  }
+  for (let i = 0; i < currentCars.length; i++) {
+    currentCars[i].dispose();
+  }
+  currentCars = [...bestCars];
+  while (currentCars.length < numCars) {
+    if (Math.random() > 0.1) {
+      const chosenDriver = bestCars[Math.floor(Math.random() * bestCarCount)];
+      currentCars.push(chosenDriver.copyDriver());
+    } else {
+      currentCars.push(Car.createCar());
+    }
+  }
 }
